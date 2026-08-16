@@ -834,48 +834,56 @@ fun BackgroundAmbientPlayer(modifier: Modifier = Modifier) {
                             try {
                                 val s = Surface(surfaceTexture)
                                 surface = s
-                                val afd = ctx.resources.openRawResourceFd(R.raw.bg_login)
-                                if (afd != null) {
-                                    mediaPlayer = MediaPlayer().apply {
+                                mediaPlayer = MediaPlayer().apply {
+                                    try {
+                                        val afd = ctx.assets.openFd("bg_login.mp4")
                                         setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
                                         try { afd.close() } catch (e: Exception) {}
-                                        setSurface(s)
-                                        isLooping = true
-                                        setVolume(0f, 0f)
-                                        setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
-                                        setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
-                                            try {
-                                                if (videoWidth > 0 && videoHeight > 0 && width > 0 && height > 0) {
-                                                    val scaleX = width.toFloat() / videoWidth
-                                                    val scaleY = height.toFloat() / videoHeight
-                                                    val scale = maxOf(scaleX, scaleY)
-                                                    val matrix = android.graphics.Matrix()
-                                                    matrix.setScale(
-                                                        (videoWidth * scale) / width,
-                                                        (videoHeight * scale) / height,
-                                                        width / 2f,
-                                                        height / 2f
-                                                    )
-                                                    setTransform(matrix)
-                                                }
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
-                                            }
+                                    } catch (e1: Exception) {
+                                        try {
+                                            val afdRaw = ctx.resources.openRawResourceFd(R.raw.bg_login)
+                                            setDataSource(afdRaw.fileDescriptor, afdRaw.startOffset, afdRaw.length)
+                                            try { afdRaw.close() } catch (e: Exception) {}
+                                        } catch (e2: Exception) {
+                                            setDataSource(ctx, Uri.parse("file:///android_asset/bg_login.mp4"))
                                         }
-                                        setOnPreparedListener { mp ->
-                                            try {
-                                                mp.start()
-                                                isVideoReady = true
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
-                                            }
-                                        }
-                                        setOnErrorListener { _, _, _ ->
-                                            isVideoReady = false
-                                            true
-                                        }
-                                        prepareAsync()
                                     }
+                                    setSurface(s)
+                                    isLooping = true
+                                    setVolume(0f, 0f)
+                                    setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                                    setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
+                                        try {
+                                            if (videoWidth > 0 && videoHeight > 0 && width > 0 && height > 0) {
+                                                val scaleX = width.toFloat() / videoWidth
+                                                val scaleY = height.toFloat() / videoHeight
+                                                val scale = maxOf(scaleX, scaleY)
+                                                val matrix = android.graphics.Matrix()
+                                                matrix.setScale(
+                                                    (videoWidth * scale) / width,
+                                                    (videoHeight * scale) / height,
+                                                    width / 2f,
+                                                    height / 2f
+                                                )
+                                                setTransform(matrix)
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    setOnPreparedListener { mp ->
+                                        try {
+                                            mp.start()
+                                            isVideoReady = true
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    setOnErrorListener { _, _, _ ->
+                                        isVideoReady = false
+                                        true
+                                    }
+                                    prepareAsync()
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
