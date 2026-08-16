@@ -1,0 +1,6 @@
+{
+  "name": "Yaraan",
+  "description": "Yaraan Voice Chat & Party - Connect, talk, and celebrate with friends in real-time voice rooms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
