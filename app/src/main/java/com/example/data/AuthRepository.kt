@@ -63,31 +63,49 @@ class AuthRepository(private val context: Context) {
     }
 
     init {
-        checkInitialAuth()
+        try {
+            checkInitialAuth()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error during AuthRepository initialization", e)
+            _authState.value = AuthState.Idle
+        }
     }
 
     fun isPrivacyPolicyAccepted(): Boolean {
-        return prefs.getBoolean(PREF_PRIVACY_ACCEPTED, true)
+        return try {
+            prefs.getBoolean(PREF_PRIVACY_ACCEPTED, true)
+        } catch (e: Throwable) {
+            true
+        }
     }
 
     fun setPrivacyPolicyAccepted(accepted: Boolean) {
-        prefs.edit().putBoolean(PREF_PRIVACY_ACCEPTED, accepted).apply()
+        try {
+            prefs.edit().putBoolean(PREF_PRIVACY_ACCEPTED, accepted).apply()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error setting privacy policy accepted", e)
+        }
     }
 
     private fun checkInitialAuth() {
-        val currentUser = auth?.currentUser
-        val isUserLoggedIn = prefs.getBoolean(PREF_USER_LOGGED_IN, false)
-        if (currentUser != null && isUserLoggedIn) {
-            val authType = prefs.getString(PREF_AUTH_TYPE, "google") ?: "google"
-            val email = prefs.getString(PREF_SAVED_EMAIL, null)
-            val password = prefs.getString(PREF_SAVED_PASSWORD, null)
-            _authState.value = AuthState.Authenticated(
-                user = currentUser,
-                email = email,
-                password = password,
-                authType = authType
-            )
-        } else {
+        try {
+            val currentUser = auth?.currentUser
+            val isUserLoggedIn = prefs.getBoolean(PREF_USER_LOGGED_IN, false)
+            if (currentUser != null && isUserLoggedIn) {
+                val authType = prefs.getString(PREF_AUTH_TYPE, "google") ?: "google"
+                val email = prefs.getString(PREF_SAVED_EMAIL, null)
+                val password = prefs.getString(PREF_SAVED_PASSWORD, null)
+                _authState.value = AuthState.Authenticated(
+                    user = currentUser,
+                    email = email,
+                    password = password,
+                    authType = authType
+                )
+            } else {
+                _authState.value = AuthState.Idle
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "checkInitialAuth error", e)
             _authState.value = AuthState.Idle
         }
     }
