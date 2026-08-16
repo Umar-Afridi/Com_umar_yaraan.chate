@@ -34,7 +34,17 @@ sealed class AuthState {
 
 class AuthRepository(private val context: Context) {
 
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth? by lazy {
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
+                com.google.firebase.FirebaseApp.initializeApp(context)
+            }
+            FirebaseAuth.getInstance()
+        } catch (e: Exception) {
+            Log.e(TAG, "FirebaseAuth init failed", e)
+            null
+        }
+    }
     private val prefs: SharedPreferences =
         context.getSharedPreferences("yaraan_auth_prefs", Context.MODE_PRIVATE)
 
@@ -65,7 +75,7 @@ class AuthRepository(private val context: Context) {
     }
 
     private fun checkInitialAuth() {
-        val currentUser = auth.currentUser
+        val currentUser = auth?.currentUser
         val isUserLoggedIn = prefs.getBoolean(PREF_USER_LOGGED_IN, false)
         if (currentUser != null && isUserLoggedIn) {
             val authType = prefs.getString(PREF_AUTH_TYPE, "google") ?: "google"
@@ -101,8 +111,9 @@ class AuthRepository(private val context: Context) {
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
             val idToken = googleIdTokenCredential.idToken
 
+            val authInstance = auth ?: throw Exception("Firebase Auth is not available")
             val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-            val authResult = auth.signInWithCredential(firebaseCredential).await()
+            val authResult = authInstance.signInWithCredential(firebaseCredential).await()
             val user = authResult.user ?: throw Exception("Firebase user is null after Google sign in")
 
             prefs.edit()
@@ -132,7 +143,8 @@ class AuthRepository(private val context: Context) {
     suspend fun signInWithEmail(email: String, pass: String): Result<FirebaseUser> = withContext(Dispatchers.IO) {
         try {
             _authState.value = AuthState.Loading
-            val authResult = auth.signInWithEmailAndPassword(email.trim(), pass).await()
+            val authInstance = auth ?: throw Exception("Firebase Auth is not available")
+            val authResult = authInstance.signInWithEmailAndPassword(email.trim(), pass).await()
             val user = authResult.user ?: throw Exception("User is null")
 
             prefs.edit()
@@ -167,7 +179,8 @@ class AuthRepository(private val context: Context) {
     suspend fun signUpWithEmail(username: String, email: String, pass: String): Result<FirebaseUser> = withContext(Dispatchers.IO) {
         try {
             _authState.value = AuthState.Loading
-            val authResult = auth.createUserWithEmailAndPassword(email.trim(), pass).await()
+            val authInstance = auth ?: throw Exception("Firebase Auth is not available")
+            val authResult = authInstance.createUserWithEmailAndPassword(email.trim(), pass).await()
             val user = authResult.user ?: throw Exception("User is null")
 
             // Update display name
@@ -213,7 +226,8 @@ class AuthRepository(private val context: Context) {
 
     suspend fun sendPasswordReset(email: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            auth.sendPasswordResetEmail(email.trim()).await()
+            val authInstance = auth ?: throw Exception("Firebase Auth is not available")
+            authInstance.sendPasswordResetEmail(email.trim()).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Password reset failed", e)
@@ -227,7 +241,11 @@ class AuthRepository(private val context: Context) {
     }
 
     fun signOut() {
-        auth.signOut()
+        try {
+            auth?.signOut()
+        } catch (e: Exception) {
+            Log.e(TAG, "Sign out error", e)
+        }
         prefs.edit()
             .putBoolean(PREF_USER_LOGGED_IN, false)
             .remove(PREF_SAVED_EMAIL)

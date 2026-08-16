@@ -122,25 +122,34 @@ fun VoiceChatWebView(
         )
     }
 
-    // Audio Permission Launcher for Voice Chat
+    val permissionsToRequest = remember {
+        mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS
+        ).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+                add(Manifest.permission.READ_MEDIA_IMAGES)
+            }
+        }.toTypedArray()
+    }
+
+    // Permissions Launcher for Voice Chat and Media
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val recordAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
         permissionGranted = recordAudioGranted
-        if (recordAudioGranted) {
-            webViewInstance?.reload()
-        }
+        webViewInstance?.reload()
     }
 
     LaunchedEffect(Unit) {
-        if (!permissionGranted) {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.MODIFY_AUDIO_SETTINGS
-                )
-            )
+        val missingPermissions = permissionsToRequest.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missingPermissions.isNotEmpty()) {
+            permissionLauncher.launch(missingPermissions.toTypedArray())
         }
     }
 
