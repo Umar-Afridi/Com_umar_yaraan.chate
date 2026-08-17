@@ -30,22 +30,22 @@ jobs:
             chmod +x ./gradlew
           fi
 
-      - name: Build APK and AAB
+      - name: Build Release APK and AAB
         run: |
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug bundleDebug --no-daemon
+            ./gradlew assembleRelease bundleRelease --no-daemon
           else
-            gradle assembleDebug bundleDebug --no-daemon
+            gradle assembleRelease bundleRelease --no-daemon
           fi
 
-      - name: Upload APK Artifact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: app-release-apk
+          path: app/build/outputs/apk/release/*.apk
 
-      - name: Upload AAB Artifact
+      - name: Upload Release AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-aab
-          path: app/build/outputs/bundle/debug/*.aab
+          name: app-release-aab
+          path: app/build/outputs/bundle/release/*.aab

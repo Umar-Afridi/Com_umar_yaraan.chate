@@ -25,13 +25,12 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      val keystoreFile = file(keystorePath)
+      val keystoreFile = file("${rootDir}/release.jks")
       if (keystoreFile.exists()) {
         storeFile = keystoreFile
-        storePassword = System.getenv("STORE_PASSWORD")
-        keyAlias = "upload"
-        keyPassword = System.getenv("KEY_PASSWORD")
+        storePassword = System.getenv("STORE_PASSWORD") ?: "yaraan123456"
+        keyAlias = System.getenv("KEY_ALIAS") ?: "release"
+        keyPassword = System.getenv("KEY_PASSWORD") ?: "yaraan123456"
       }
     }
   }
@@ -41,8 +40,8 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      if (file(keystorePath).exists()) {
+      val keystoreFile = file("${rootDir}/release.jks")
+      if (keystoreFile.exists()) {
         signingConfig = signingConfigs.getByName("release")
       } else {
         signingConfig = signingConfigs.getByName("debug")
@@ -101,16 +100,11 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
-  // Uncomment to use Firestore:
-  // implementation(libs.firebase.firestore)
-
   // Firebase Auth and Google Sign-In via Credential Manager:
   implementation(libs.firebase.auth)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
   implementation(libs.googleid)
-  implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
