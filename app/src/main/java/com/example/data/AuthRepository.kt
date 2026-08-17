@@ -146,10 +146,10 @@ class AuthRepository(private val context: Context) {
             )
 
             Result.success(user)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Google Sign In failed", e)
             val errorMsg = when {
-                e.message?.contains("canceled", ignoreCase = true) == true -> "Sign in was cancelled"
+                e is androidx.credentials.exceptions.GetCredentialCancellationException || e.message?.contains("canceled", ignoreCase = true) == true -> "Sign in was cancelled"
                 e.message?.contains("network", ignoreCase = true) == true -> "Network error. Please check your internet connection."
                 else -> e.localizedMessage ?: "Failed to sign in with Google"
             }

@@ -390,7 +390,19 @@ fun VoiceChatWebView(
 
     DisposableEffect(Unit) {
         onDispose {
-            webViewInstance?.destroy()
+            try {
+                webViewInstance?.apply {
+                    stopLoading()
+                    loadUrl("about:blank")
+                    clearHistory()
+                    removeAllViews()
+                    destroy()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error destroying webview", e)
+            } finally {
+                webViewInstance = null
+            }
         }
     }
 }

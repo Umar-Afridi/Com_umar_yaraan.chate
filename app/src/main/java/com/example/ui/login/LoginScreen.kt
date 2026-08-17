@@ -330,8 +330,12 @@ fun LoginScreen(
                         onClick = { offset ->
                             annotatedText.getStringAnnotations(tag = "POLICY", start = offset, end = offset)
                                 .firstOrNull()?.let { annotation ->
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
-                                    context.startActivity(intent)
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("LoginScreen", "Failed to open privacy policy link", e)
+                                    }
                                 }
                         }
                     )
