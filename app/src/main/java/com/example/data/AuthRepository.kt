@@ -40,7 +40,7 @@ class AuthRepository(private val context: Context) {
                 com.google.firebase.FirebaseApp.initializeApp(context)
             }
             FirebaseAuth.getInstance()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "FirebaseAuth init failed", e)
             null
         }

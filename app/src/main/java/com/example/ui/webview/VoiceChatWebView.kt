@@ -219,10 +219,13 @@ fun VoiceChatWebView(
 
                         override fun onPermissionRequest(request: PermissionRequest?) {
                             request?.let { permRequest ->
-                                val requestedResources = permRequest.resources
-                                Log.d(TAG, "Web requested permissions: ${requestedResources.joinToString()}")
-                                // Grant audio/video capture resources directly to the WebView for WebRTC voice rooms
-                                permRequest.grant(requestedResources)
+                                try {
+                                    val requestedResources = permRequest.resources
+                                    Log.d(TAG, "Web requested permissions: ${requestedResources?.joinToString()}")
+                                    permRequest.grant(requestedResources)
+                                } catch (e: Throwable) {
+                                    Log.e(TAG, "Error granting WebView permissions", e)
+                                }
                             }
                         }
 
