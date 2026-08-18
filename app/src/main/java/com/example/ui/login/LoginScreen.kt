@@ -330,8 +330,12 @@ fun LoginScreen(
                         onClick = { offset ->
                             annotatedText.getStringAnnotations(tag = "POLICY", start = offset, end = offset)
                                 .firstOrNull()?.let { annotation ->
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
-                                    context.startActivity(intent)
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("LoginScreen", "Failed to open privacy policy link", e)
+                                    }
                                 }
                         }
                     )
@@ -838,14 +842,18 @@ fun BackgroundAmbientPlayer(modifier: Modifier = Modifier) {
                                     try {
                                         val afd = ctx.assets.openFd("bg_login.mp4")
                                         setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                                        try { afd.close() } catch (e: Exception) {}
-                                    } catch (e1: Exception) {
+                                        afd.close()
+                                    } catch (e1: Throwable) {
                                         try {
                                             val afdRaw = ctx.resources.openRawResourceFd(R.raw.bg_login)
                                             setDataSource(afdRaw.fileDescriptor, afdRaw.startOffset, afdRaw.length)
-                                            try { afdRaw.close() } catch (e: Exception) {}
-                                        } catch (e2: Exception) {
-                                            setDataSource(ctx, Uri.parse("file:///android_asset/bg_login.mp4"))
+                                            afdRaw.close()
+                                        } catch (e2: Throwable) {
+                                            try {
+                                                setDataSource(ctx, Uri.parse("file:///android_asset/bg_login.mp4"))
+                                            } catch (e3: Throwable) {
+                                                android.util.Log.e("LoginScreen", "Failed to load bg_login.mp4", e3)
+                                            }
                                         }
                                     }
                                     setSurface(s)
