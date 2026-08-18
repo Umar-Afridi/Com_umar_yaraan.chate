@@ -166,111 +166,114 @@ fun VoiceChatWebView(
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                WebView(ctx).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    setBackgroundColor(android.graphics.Color.parseColor("#05020A"))
+                try {
+                    WebView(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setBackgroundColor(android.graphics.Color.parseColor("#05020A"))
 
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        databaseEnabled = true
-                        mediaPlaybackRequiresUserGesture = false
-                        allowFileAccess = true
-                        allowContentAccess = true
-                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        cacheMode = WebSettings.LOAD_DEFAULT
-                        useWideViewPort = true
-                        loadWithOverviewMode = true
-                        displayZoomControls = false
-                        builtInZoomControls = false
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                            mediaPlaybackRequiresUserGesture = false
+                            allowFileAccess = true
+                            allowContentAccess = true
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            cacheMode = WebSettings.LOAD_DEFAULT
+                            useWideViewPort = true
+                            loadWithOverviewMode = true
+                            displayZoomControls = false
+                            builtInZoomControls = false
 
-                        // Append YaraanFlutterApp identifier to User-Agent
-                        val defaultUA = userAgentString
-                        userAgentString = "$defaultUA YaraanFlutterApp YaraanNativeAndroid/1.0"
-                    }
+                            val defaultUA = userAgentString ?: ""
+                            userAgentString = "$defaultUA YaraanFlutterApp YaraanNativeAndroid/1.0"
+                        }
 
-                    val cookieManager = CookieManager.getInstance()
-                    cookieManager.setAcceptCookie(true)
-                    cookieManager.setAcceptThirdPartyCookies(this, true)
+                        try {
+                            val cookieManager = CookieManager.getInstance()
+                            cookieManager.setAcceptCookie(true)
+                            cookieManager.setAcceptThirdPartyCookies(this, true)
+                        } catch (e: Throwable) {
+                            Log.e(TAG, "CookieManager init error", e)
+                        }
 
-                    // Add JavaScript Channel Interface
-                    addJavascriptInterface(
-                        WebAppInterface(
-                            onLogout = {
-                                coroutineScope.launch {
-                                    onLogoutRequested()
+                        addJavascriptInterface(
+                            WebAppInterface(
+                                onLogout = {
+                                    coroutineScope.launch {
+                                        onLogoutRequested()
+                                    }
+                                },
+                                onUserMessage = { msg ->
+                                    Log.d(TAG, "Web JS message: $msg")
                                 }
-                            },
-                            onUserMessage = { msg ->
-                                Log.d(TAG, "Web JS message: $msg")
-                            }
-                        ),
-                        "YaraanAppChannel"
-                    )
+                            ),
+                            "YaraanAppChannel"
+                        )
 
-                    webChromeClient = object : WebChromeClient() {
-                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                            pageProgress = newProgress / 100f
-                            isPageLoading = newProgress < 100
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                pageProgress = newProgress / 100f
+                                isPageLoading = newProgress < 100
+                            }
+
+                            override fun onPermissionRequest(request: PermissionRequest?) {
+                                request?.let { permRequest ->
+                                    try {
+                                        val requestedResources = permRequest.resources
+                                        Log.d(TAG, "Web requested permissions: ${requestedResources?.joinToString()}")
+                                        permRequest.grant(requestedResources)
+                                    } catch (e: Throwable) {
+                                        Log.e(TAG, "Error granting WebView permissions", e)
+                                    }
+                                }
+                            }
+
+                            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                                Log.d(TAG, "Web Console: ${consoleMessage?.message()}")
+                                return super.onConsoleMessage(consoleMessage)
+                            }
                         }
 
-                        override fun onPermissionRequest(request: PermissionRequest?) {
-                            request?.let { permRequest ->
-                                try {
-                                    val requestedResources = permRequest.resources
-                                    Log.d(TAG, "Web requested permissions: ${requestedResources?.joinToString()}")
-                                    permRequest.grant(requestedResources)
-                                } catch (e: Throwable) {
-                                    Log.e(TAG, "Error granting WebView permissions", e)
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                isPageLoading = true
+                                hasError = false
+                                injectBypassStyles(view)
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                isPageLoading = false
+                                injectBypassStyles(view)
+                                dispatchNativeAuth(view, authState)
+                            }
+
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: WebResourceRequest?,
+                                error: WebResourceError?
+                            ) {
+                                super.onReceivedError(view, request, error)
+                                if (request?.isForMainFrame == true) {
+                                    hasError = true
+                                    errorMessage = error?.description?.toString() ?: "Failed to connect to Yaraan servers."
                                 }
                             }
                         }
 
-                        override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                            Log.d(TAG, "Web Console: ${consoleMessage?.message()}")
-                            return super.onConsoleMessage(consoleMessage)
-                        }
+                        loadUrl(TARGET_WEB_URL)
+                        webViewInstance = this
                     }
-
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                            super.onPageStarted(view, url, favicon)
-                            isPageLoading = true
-                            hasError = false
-
-                            // Pre-inject CSS to hide web login screen
-                            injectBypassStyles(view)
-                        }
-
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            isPageLoading = false
-
-                            // Inject CSS to ensure web auth elements are bypassed and hidden
-                            injectBypassStyles(view)
-
-                            // Dispatch native login authentication data into web app
-                            dispatchNativeAuth(view, authState)
-                        }
-
-                        override fun onReceivedError(
-                            view: WebView?,
-                            request: WebResourceRequest?,
-                            error: WebResourceError?
-                        ) {
-                            super.onReceivedError(view, request, error)
-                            if (request?.isForMainFrame == true) {
-                                hasError = true
-                                errorMessage = error?.description?.toString() ?: "Failed to connect to Yaraan servers."
-                            }
-                        }
-                    }
-
-                    loadUrl(TARGET_WEB_URL)
-                    webViewInstance = this
+                } catch (e: Throwable) {
+                    Log.e(TAG, "WebView instantiation error", e)
+                    hasError = true
+                    errorMessage = "WebView unavailable: ${e.localizedMessage}"
+                    WebView(ctx)
                 }
             },
             update = { view ->

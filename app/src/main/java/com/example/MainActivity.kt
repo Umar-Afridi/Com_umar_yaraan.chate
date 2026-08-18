@@ -33,25 +33,33 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "enableEdgeToEdge error", e)
+        }
 
         try {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(this)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.e("MainActivity", "Firebase init error", e)
         }
 
-        setContent {
-            MyApplicationTheme(darkTheme = true) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF05020A)
-                ) {
-                    MainAppContent(viewModel = authViewModel)
+        try {
+            setContent {
+                MyApplicationTheme(darkTheme = true) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color(0xFF05020A)
+                    ) {
+                        MainAppContent(viewModel = authViewModel)
+                    }
                 }
             }
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "setContent error", e)
         }
     }
 }
