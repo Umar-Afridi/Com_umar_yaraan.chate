@@ -33,18 +33,29 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Set default uncaught exception handler to prevent silent startup crashes and log error details
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("YaraanStartup", "Uncaught exception on thread ${thread.name}", throwable)
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+
+        android.util.Log.d("YaraanStartup", "MainActivity onCreate started")
+
         try {
             enableEdgeToEdge()
         } catch (e: Throwable) {
-            android.util.Log.e("MainActivity", "enableEdgeToEdge error", e)
+            android.util.Log.e("YaraanStartup", "enableEdgeToEdge error", e)
         }
 
         try {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(this)
+                android.util.Log.d("YaraanStartup", "FirebaseApp initialized successfully")
             }
         } catch (e: Throwable) {
-            android.util.Log.e("MainActivity", "Firebase init error", e)
+            android.util.Log.e("YaraanStartup", "Firebase init error", e)
         }
 
         try {
@@ -58,8 +69,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            android.util.Log.d("YaraanStartup", "setContent completed successfully")
         } catch (e: Throwable) {
-            android.util.Log.e("MainActivity", "setContent error", e)
+            android.util.Log.e("YaraanStartup", "setContent error", e)
         }
     }
 }
